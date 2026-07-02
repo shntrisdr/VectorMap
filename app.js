@@ -1,6 +1,3 @@
-const API_BASE = 'http://localhost:8000';
-
-let movieData = [];
 let chartInstance = null;
 let selectedMovies = []; // Max 2
 
@@ -15,15 +12,8 @@ const relationResult = document.getElementById('relation-result');
 const selectionInfo = document.getElementById('selection-info');
 
 // Initialize Map
-async function initMap() {
-    try {
-        const response = await fetch(`${API_BASE}/map`);
-        const data = await response.json();
-        movieData = data.map_data;
-        renderChart(movieData);
-    } catch (error) {
-        console.error("Failed to load map data:", error);
-    }
+function initMap() {
+    renderChart(MOVIE_DATA);
 }
 
 // Render Chart.js Scatter Plot
@@ -118,25 +108,23 @@ function renderChart(data) {
 }
 
 // Search Logic
-async function handleSearch() {
-    const query = searchInput.value.trim();
+function handleSearch() {
+    const query = searchInput.value.trim().toLowerCase();
     if (!query) {
         searchResults.classList.add('hidden');
-        renderChart(movieData); // Reset to full map
+        renderChart(MOVIE_DATA); // Reset to full map
         return;
     }
 
-    try {
-        const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        displaySearchResults(data.results);
-        
-        // Highlight search results on map
-        const resultIds = new Set(data.results.map(r => r.id));
-        highlightMapPoints(resultIds);
-    } catch (error) {
-        console.error("Search failed:", error);
-    }
+    const results = MOVIE_DATA.filter(movie =>
+        movie.title.toLowerCase().includes(query) ||
+        movie.genre.toLowerCase().includes(query)
+    );
+    displaySearchResults(results);
+
+    // Highlight search results on map
+    const resultIds = new Set(results.map(r => r.id));
+    highlightMapPoints(resultIds);
 }
 
 function displaySearchResults(results) {
@@ -152,7 +140,7 @@ function displaySearchResults(results) {
                 handleMovieSelect(movie);
                 searchInput.value = ''; // Clear search to reset highlights
                 searchResults.classList.add('hidden');
-                renderChart(movieData); // Reset chart to clear search highlights, vector state will be maintained
+                renderChart(MOVIE_DATA); // Reset chart to clear search highlights, vector state will be maintained
             });
             searchResults.appendChild(div);
         });
@@ -163,7 +151,7 @@ function displaySearchResults(results) {
 function highlightMapPoints(highlightIds) {
     if (!chartInstance) return;
     
-    const colors = movieData.map(m => highlightIds.has(m.id) ? '#e74c3c' : '#bdc3c7');
+    const colors = MOVIE_DATA.map(m => highlightIds.has(m.id) ? '#e74c3c' : '#bdc3c7');
     chartInstance.data.datasets[0].backgroundColor = colors;
     chartInstance.update();
 }
@@ -241,8 +229,21 @@ function updateSelectionUI() {
     relationResult.classList.add('hidden');
 }
 
+function cosineSimilarity(vecA, vecB) {
+    let dotProduct = 0.0;
+    let normA = 0.0;
+    let normB = 0.0;
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    if (normA === 0 || normB === 0) return 0;
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
 // Relation Logic
-async function getRelation() {
+function getRelation() {
     if (selectedMovies.length !== 2) return;
 
     getRelationBtn.disabled = true;
@@ -250,10 +251,26 @@ async function getRelation() {
     relationResult.classList.add('hidden');
 
     try {
-        const response = await fetch(`${API_BASE}/relation?id1=${selectedMovies[0].id}&id2=${selectedMovies[1].id}`);
-        const data = await response.json();
+        const m1 = selectedMovies[0];
+        const m2 = selectedMovies[1];
         
-        relationResult.innerHTML = `<strong>Semantic Match:</strong> ${(data.similarity * 100).toFixed(1)}%<br><br>${data.relation_explanation}`;
+        const similarity = cosineSimilarity(m1.vector, m2.vector);
+
+        // Mock LLM explanation logic moved to JS
+        let explanation = "";
+        if (similarity > 0.6) {
+            explanation = `Both '${m1.title}' and '${m2.title}' share highly similar themes, likely revolving around common concepts found in their overviews. They might explore similar philosophical ideas or take place in related settings.`;
+        } else if (similarity > 0.3) {
+            explanation = `'${m1.title}' and '${m2.title}' have some thematic overlap. While their main plots differ, they share underlying motifs or genres.`;
+        } else {
+            explanation = `'${m1.title}' and '${m2.title}' are quite different in their core concepts and narratives. One focuses on '${m1.genre}' elements, while the other leans towards '${m2.genre}'.`;
+        }
+
+        if (m1.genre === m2.genre) {
+            explanation += ` However, they both belong to the ${m1.genre} genre, which explains some structural similarities.`;
+        }
+
+        relationResult.innerHTML = `<strong>Semantic Match:</strong> ${(similarity * 100).toFixed(1)}%<br><br>${explanation}`;
         relationResult.classList.remove('hidden');
     } catch (error) {
         console.error("Failed to get relation:", error);
