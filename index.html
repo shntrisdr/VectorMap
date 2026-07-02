@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serendipity Engine: Semantic Movie Map</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js for map visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.2.0/chartjs-plugin-zoom.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Serendipity Engine</h1>
+        <p>The Semantic Movie Map MVP</p>
+    </header>
+
+    <main>
+        <section id="search-section">
+            <input type="text" id="search-input" placeholder="Search for a movie (e.g., 'space', 'comedy')">
+            <button id="search-btn">Search</button>
+            <div id="search-results" class="hidden"></div>
+        </section>
+
+        <section id="main-view" class="container">
+            <div id="map-container">
+                <canvas id="movieMap"></canvas>
+            </div>
+
+            <div id="side-panel">
+                <h3>Selection</h3>
+                <div id="selection-info">
+                    <p>Select two movies on the map to see their relation.</p>
+                </div>
+                <div id="movie1-info" class="selected-movie"></div>
+                <div id="movie2-info" class="selected-movie"></div>
+                
+                <button id="get-relation-btn" class="hidden">Explain Relation</button>
+                <div id="relation-result" class="hidden"></div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
