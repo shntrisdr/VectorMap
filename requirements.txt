@@ -1,6 +1,0 @@
-sentence-transformers
-umap-learn
-numpy
-scikit-learn
-fastapi
-uvicorn
